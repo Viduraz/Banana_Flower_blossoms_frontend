@@ -7,11 +7,11 @@ import toast from 'react-hot-toast'
 import { User, Mail, Shield, Settings, Crown, Trash2, Edit3, Save, X, Eye, EyeOff, Sparkles } from 'lucide-react'
 
 function Userprofile() {
-  const { user, isAdmin, updateUser, logout } = useAuth()
+  const { user, isAuthenticated, isLoading, updateUser, logout } = useAuth()
   const navigate = useNavigate()
   const [isEditing, setIsEditing] = useState(false)
   const [isChangingPassword, setIsChangingPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingState, setIsLoading] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -43,19 +43,23 @@ function Userprofile() {
   }, [])
 
   useEffect(() => {
-    // Redirect if not logged in
-    if (!user) {
+    // Don't redirect if still loading
+    if (isLoading) return;
+    
+    if (!isAuthenticated) {
       toast.error('Please login to access your profile')
       navigate('/login')
       return
     }
 
-    // Initialize profile data
-    setProfileData({
-      username: user.username || '',
-      email: user.email || ''
-    })
-  }, [user, navigate])
+    // Initialize profile data only if user exists
+    if (user) {
+      setProfileData({
+        username: user.username || '',
+        email: user.email || ''
+      })
+    }
+  }, [isAuthenticated, isLoading, navigate, user])
 
   const handleProfileChange = (e) => {
     setProfileData({
@@ -257,6 +261,18 @@ function Userprofile() {
     />
   ))
 
+  // Show loading if auth is still being checked
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 via-indigo-900 to-pink-900">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
@@ -424,7 +440,7 @@ function Userprofile() {
 
               {/* Enhanced Admin Quick Access */}
               <AnimatePresence>
-                {isAdmin && (
+                {user.roles?.includes('ROLE_ADMIN') && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -569,11 +585,11 @@ function Userprofile() {
                     <div className="flex space-x-4 pt-4">
                       <motion.button
                         type="submit"
-                        disabled={isLoading}
+                        disabled={isLoadingState}
                         className="flex-1 py-4 px-8 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white font-bold rounded-2xl shadow-2xl disabled:opacity-50 relative overflow-hidden text-lg"
                         variants={buttonVariants}
-                        whileHover={!isLoading ? "hover" : ""}
-                        whileTap={!isLoading ? "tap" : ""}
+                        whileHover={!isLoadingState ? "hover" : ""}
+                        whileTap={!isLoadingState ? "tap" : ""}
                       >
                         <motion.div
                           className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-400"
@@ -583,7 +599,7 @@ function Userprofile() {
                         />
                         <span className="relative z-10 flex items-center justify-center">
                           <Save className="w-6 h-6 mr-3" />
-                          {isLoading ? 'Saving...' : 'Save Changes'}
+                          {isLoadingState ? 'Saving...' : 'Save Changes'}
                         </span>
                       </motion.button>
                     </div>
@@ -825,11 +841,11 @@ function Userprofile() {
                     {/* Change Password Button */}
                     <motion.button
                       type="submit"
-                      disabled={isLoading || passwordData.newPassword !== passwordData.confirmPassword}
+                      disabled={isLoadingState || passwordData.newPassword !== passwordData.confirmPassword}
                       className="w-full py-4 px-8 bg-gradient-to-r from-green-600 via-emerald-600 to-green-700 text-white font-bold rounded-2xl shadow-2xl disabled:opacity-50 relative overflow-hidden text-lg"
                       variants={buttonVariants}
-                      whileHover={!isLoading ? "hover" : ""}
-                      whileTap={!isLoading ? "tap" : ""}
+                      whileHover={!isLoadingState ? "hover" : ""}
+                      whileTap={!isLoadingState ? "tap" : ""}
                     >
                       <motion.div
                         className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400"
@@ -839,7 +855,7 @@ function Userprofile() {
                       />
                       <span className="relative z-10 flex items-center justify-center">
                         <Shield className="w-6 h-6 mr-3" />
-                        {isLoading ? 'Changing...' : 'Change Password'}
+                        {isLoadingState ? 'Changing...' : 'Change Password'}
                       </span>
                     </motion.button>
                   </form>
