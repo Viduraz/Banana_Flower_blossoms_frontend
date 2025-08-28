@@ -182,87 +182,73 @@ function OrdersPage() {
 
   const handleCreateOrder = async (e) => {
     e.preventDefault()
-    
-    if (!orderForm.address.trim()) {
-      toast.error('Please enter delivery address')
-      return
-    }
-
-    if (!orderForm.phone.trim()) {
-      toast.error('Please enter phone number')
-      return
-    }
-
-    if (orderForm.quantity < 100) {
-      toast.error('Minimum order quantity is 100g')
-      return
-    }
-
     setIsProcessingPayment(true)
 
     try {
-      // Create order in backend
-      const orderData = {
-        address: `${orderForm.address} | Phone: ${orderForm.phone} | Instructions: ${orderForm.specialInstructions}`,
-        items: `${product.name} - ${orderForm.quantity}g`,
-        totalAmount: parseFloat(calculateTotal())
+      // Validate required fields
+      if (!orderForm.address.trim()) {
+        toast.error('Please enter your delivery address')
+        return
       }
 
-      console.log('Creating order with data:', orderData);
+      if (!orderForm.phone.trim()) {
+        toast.error('Please enter your phone number')
+        return
+      }
 
+      if (orderForm.quantity < 100) {
+        toast.error('Minimum order quantity is 100 grams')
+        return
+      }
+
+      // Create order data - MAKE SURE specialInstructions is included
+      const orderData = {
+        address: `${orderForm.address} | Phone: ${orderForm.phone}`,
+        items: `Fresh Banana Flower Blossoms - ${orderForm.quantity}g`,
+        totalAmount: parseFloat(calculateTotal()),
+        specialInstructions: orderForm.specialInstructions || null // <-- Make sure this is included
+      }
+
+      console.log('Order data being sent:', orderData) // Debug log
+
+      // Create order
       const orderResponse = await orderAPI.createOrder(user.id, orderData)
       
-      console.log('Order response:', orderResponse);
-      
-      // Fix: Check for orderResponse.success instead of orderResponse.data.success
-      if (orderResponse.success && orderResponse.data) {
-        // Access the actual order data from the response
-        const order = orderResponse.data; // Note: not nested .data
-        
-        console.log('Created order:', order);
-        
-        toast.success('Order created successfully!')
-        
-        // Prepare payment data with proper order ID (USD pricing)
-        const paymentData = {
-          orderId: `ORD-${order.id}-${Date.now()}`, // Now order.id should be valid
-          items: `${product.name} (${orderForm.quantity}g)`,
-          amount: parseFloat(calculateTotal()),
-          currency: product.currency, // USD
-          firstName: user.username.split(' ')[0] || user.username,
-          lastName: user.username.split(' ')[1] || 'User',
-          email: user.email,
-          phone: orderForm.phone,
-          address: orderForm.address,
-          city: 'New York' // Changed from Colombo for USD payments
-        }
+      if (orderResponse.success) {
+        const order = orderResponse.data
 
-        console.log('Payment data being sent:', paymentData);
+        // Prepare payment data
+        const paymentData = {
+          amount: order.totalAmount,
+          currency: 'USD',
+          orderId: order.id,
+          description: `Order #${order.id} - ${order.items}`,
+          customerInfo: {
+            name: user.username,
+            email: user.email,
+            phone: orderForm.phone
+          }
+        }
 
         // Initiate payment
         await initiatePayment(paymentData)
         
-        // Reset form and refresh orders
+        // Reset form
         setOrderForm({
-          quantity: 100, // Reset to minimum 100g
+          quantity: 100,
           address: '',
           phone: '',
-          specialInstructions: ''
+          specialInstructions: '' // <-- Reset this field too
         })
+
+        // Refresh orders
+        fetchUserOrders()
         
-        // Scroll to order history after successful order
-        setTimeout(() => {
-          scrollToOrderHistory()
-          fetchUserOrders()
-        }, 2000)
-        
-      } else {
-        throw new Error(orderResponse.message || 'Failed to create order')
+        toast.success('Order placed successfully! 🎉')
       }
     } catch (error) {
       console.error('Order creation error:', error)
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to create order'
-      toast.error(errorMessage)
+      toast.error('Failed to create order. Please try again.')
     } finally {
       setIsProcessingPayment(false)
     }
@@ -888,7 +874,7 @@ function OrdersPage() {
                         <div className="flex justify-between items-center text-lg border-t border-white/20 pt-4">
                           <span className="text-green-200">Delivery:</span>
                           <span className="font-bold text-green-400">
-                            {parseFloat(calculateTotal()) >= 50 ? 'FREE' : '$5.00'}
+                            FREE
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-2xl font-black border-t border-white/20 pt-4">
@@ -898,7 +884,7 @@ function OrdersPage() {
                             animate={{ scale: [1, 1.05, 1] }}
                             transition={{ duration: 2, repeat: Infinity }}
                           >
-                            ${(parseFloat(calculateTotal()) + (parseFloat(calculateTotal()) >= 50 ? 0 : 5)).toFixed(2)}
+                            ${parseFloat(calculateTotal()).toFixed(2)}
                           </motion.span>
                         </div>
                       </div>
@@ -931,7 +917,7 @@ function OrdersPage() {
                         ) : (
                           <>
                             <CreditCard className="w-7 h-7 mr-4" />
-                            💳 Pay ${(parseFloat(calculateTotal()) + (parseFloat(calculateTotal()) >= 50 ? 0 : 5)).toFixed(2)} & Place Order 🌺
+                            💳 Pay ${parseFloat(calculateTotal()).toFixed(2)} & Place Order 🌺
                           </>
                         )}
                       </span>
@@ -1086,6 +1072,20 @@ function OrdersPage() {
                                 <p className="text-white font-medium text-lg">
                                   {order.address.split('Phone: ')[1]?.split(' | ')[0] || 'Not provided'}
                                 </p>
+                              </motion.div>
+                            )}
+
+                            {/* Special Instructions Display */}
+                            {order.specialInstructions && (
+                              <motion.div 
+                                className="bg-white/10 rounded-2xl p-6 border border-white/20"
+                                whileHover={{ scale: 1.02 }}
+                              >
+                                <p className="text-lg font-bold text-green-200 mb-3 flex items-center">
+                                  <FileText className="w-5 h-5 mr-3" />
+                                  Special Instructions:
+                                </p>
+                                <p className="text-white font-medium text-lg">{order.specialInstructions}</p>
                               </motion.div>
                             )}
                             

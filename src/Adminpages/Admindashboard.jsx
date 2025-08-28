@@ -323,9 +323,15 @@ function Admindashboard() {
                         <div className="text-sm text-gray-600 mt-1">
                           {order.user?.username || 'Unknown User'} • {order.items || 'No items specified'}
                         </div>
+                        {/* Add Special Instructions Display */}
+                        {order.specialInstructions && (
+                          <div className="text-xs text-gray-500 mt-1 italic">
+                            📝 Special Instructions: {order.specialInstructions}
+                          </div>
+                        )}
                       </div>
                       <div className="text-right">
-                        <div className="font-medium text-gray-900">LKR {order.totalAmount?.toFixed(2) || '0.00'}</div>
+                        <div className="font-medium text-gray-900">USD ${order.totalAmount?.toFixed(2) || '0.00'}</div>
                         <div className="text-xs text-gray-500">
                           {order.orderDateTime ? new Date(order.orderDateTime).toLocaleDateString() : 'N/A'}
                         </div>

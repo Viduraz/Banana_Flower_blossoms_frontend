@@ -172,6 +172,9 @@ function AdminOrdersPage() {
                       Address
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Special Instructions
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -197,7 +200,7 @@ function AdminOrdersPage() {
                           {order.items || 'No items specified'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                          {order.totalAmount ? `LKR ${order.totalAmount.toFixed(2)}` : 'N/A'}
+                          {order.totalAmount ? `USD ${order.totalAmount.toFixed(2)}` : 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusDisplay.color}`}>
@@ -206,6 +209,15 @@ function AdminOrdersPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                           {order.address?.split(' | ')[0] || order.address || 'No address'}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
+                          {order.specialInstructions ? (
+                            <div className="truncate" title={order.specialInstructions}>
+                              {order.specialInstructions}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">None</span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <select
