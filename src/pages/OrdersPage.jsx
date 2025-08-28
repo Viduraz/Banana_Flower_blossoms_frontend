@@ -1,35 +1,80 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../components/AuthProvider'
 import { orderAPI } from '../api/authAPI'
 import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { 
+  ShoppingCart, 
+  Package, 
+  CreditCard, 
+  MapPin, 
+  Phone, 
+  FileText, 
+  RefreshCw, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle,
+  Eye,
+  Ban,
+  Repeat,
+  Sparkles,
+  Plus,
+  Minus,
+  Star,
+  Heart,
+  Truck
+} from 'lucide-react'
 
 function OrdersPage() {
   const { user, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
   const [userOrders, setUserOrders] = useState([])
-  const [showOrderForm, setShowOrderForm] = useState(false)
+  const [showOrderForm, setShowOrderForm] = useState(true) // Default to true for better visibility
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
+  const [focusedField, setFocusedField] = useState('')
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
-  // Product details (Banana Flower Blossoms)
+  // Refs for scrolling to sections
+  const orderFormRef = useRef(null)
+  const orderHistoryRef = useRef(null)
+
+  // Product details (Banana Flower Blossoms) - Updated to USD pricing
   const [product] = useState({
     id: 1,
     name: 'Fresh Banana Flower Blossoms',
-    description: 'Premium quality banana flower blossoms, hand-picked and fresh',
-    pricePerKg: 25.00,
-    currency: 'LKR',
+    description: 'Premium quality banana flower blossoms, hand-picked and fresh from organic farms',
+    pricePer100g: 11.99, // $11.99 per 100g
+    currency: 'USD',
     image: '🌺',
-    inStock: true
+    inStock: true,
+    rating: 4.8,
+    reviews: 127,
+    features: ['Organic', 'Fresh', 'Hand-picked', 'Premium Quality']
   })
 
-  // Order form state
+  // Order form state - Updated to grams
   const [orderForm, setOrderForm] = useState({
-    quantity: 1,
+    quantity: 100, // Start with 100g minimum
     address: '',
     phone: '',
     specialInstructions: ''
   })
+
+  // Track mouse movement for interactive background
+  useEffect(() => {
+    const updateMousePosition = (e) => {
+      setMousePosition({
+        x: (e.clientX / window.innerWidth) * 100,
+        y: (e.clientY / window.innerHeight) * 100
+      })
+    }
+
+    window.addEventListener('mousemove', updateMousePosition)
+    return () => window.removeEventListener('mousemove', updateMousePosition)
+  }, [])
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -40,6 +85,29 @@ function OrdersPage() {
 
     fetchUserOrders()
   }, [isAuthenticated, navigate])
+
+  // Scroll to section functions
+  const scrollToOrderForm = () => {
+    setShowOrderForm(true)
+    setTimeout(() => {
+      orderFormRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start',
+        inline: 'nearest'
+      })
+    }, 100)
+  }
+
+  const scrollToOrderHistory = () => {
+    setShowOrderForm(false)
+    setTimeout(() => {
+      orderHistoryRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start',
+        inline: 'nearest'
+      })
+    }, 100)
+  }
 
   const fetchUserOrders = async () => {
     try {
@@ -105,8 +173,11 @@ function OrdersPage() {
     })
   }
 
+  // Updated calculation for USD pricing per 100g
   const calculateTotal = () => {
-    return (orderForm.quantity * product.pricePerKg).toFixed(2)
+    const priceFor100g = product.pricePer100g
+    const totalPrice = (orderForm.quantity / 100) * priceFor100g
+    return totalPrice.toFixed(2)
   }
 
   const handleCreateOrder = async (e) => {
@@ -122,8 +193,8 @@ function OrdersPage() {
       return
     }
 
-    if (orderForm.quantity <= 0) {
-      toast.error('Please enter valid quantity')
+    if (orderForm.quantity < 100) {
+      toast.error('Minimum order quantity is 100g')
       return
     }
 
@@ -133,7 +204,7 @@ function OrdersPage() {
       // Create order in backend
       const orderData = {
         address: `${orderForm.address} | Phone: ${orderForm.phone} | Instructions: ${orderForm.specialInstructions}`,
-        items: `${product.name} - ${orderForm.quantity}kg`,
+        items: `${product.name} - ${orderForm.quantity}g`,
         totalAmount: parseFloat(calculateTotal())
       }
 
@@ -152,18 +223,18 @@ function OrdersPage() {
         
         toast.success('Order created successfully!')
         
-        // Prepare payment data with proper order ID
+        // Prepare payment data with proper order ID (USD pricing)
         const paymentData = {
           orderId: `ORD-${order.id}-${Date.now()}`, // Now order.id should be valid
-          items: `${product.name} (${orderForm.quantity}kg)`,
+          items: `${product.name} (${orderForm.quantity}g)`,
           amount: parseFloat(calculateTotal()),
-          currency: product.currency,
+          currency: product.currency, // USD
           firstName: user.username.split(' ')[0] || user.username,
           lastName: user.username.split(' ')[1] || 'User',
           email: user.email,
           phone: orderForm.phone,
           address: orderForm.address,
-          city: 'Colombo'
+          city: 'New York' // Changed from Colombo for USD payments
         }
 
         console.log('Payment data being sent:', paymentData);
@@ -173,13 +244,18 @@ function OrdersPage() {
         
         // Reset form and refresh orders
         setOrderForm({
-          quantity: 1,
+          quantity: 100, // Reset to minimum 100g
           address: '',
           phone: '',
           specialInstructions: ''
         })
-        setShowOrderForm(false)
-        fetchUserOrders()
+        
+        // Scroll to order history after successful order
+        setTimeout(() => {
+          scrollToOrderHistory()
+          fetchUserOrders()
+        }, 2000)
+        
       } else {
         throw new Error(orderResponse.message || 'Failed to create order')
       }
@@ -196,7 +272,7 @@ function OrdersPage() {
     try {
       console.log('Initiating payment with data:', paymentData);
       
-      // Call your payment API to get PayHere parameters
+      // Call your payment API to get PayHere parameters (updated for USD)
       const response = await fetch('http://localhost:8080/api/payment/initiate', {
         method: 'POST',
         headers: {
@@ -256,26 +332,34 @@ function OrdersPage() {
       'PENDING': { 
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200', 
         text: 'Payment Pending',
-        icon: '⏳',
-        description: 'Awaiting payment confirmation'
+        icon: <Clock className="w-4 h-4" />,
+        description: 'Awaiting payment confirmation',
+        bgGradient: 'from-yellow-500/20 to-amber-500/20',
+        borderColor: 'border-yellow-400/30'
       },
       'PAID': { 
         color: 'bg-green-100 text-green-800 border-green-200', 
         text: 'Paid & Processing',
-        icon: '✅',
-        description: 'Payment successful, order being processed'
+        icon: <CheckCircle className="w-4 h-4" />,
+        description: 'Payment successful, order being processed',
+        bgGradient: 'from-green-500/20 to-emerald-500/20',
+        borderColor: 'border-green-400/30'
       },
       'FAILED': { 
         color: 'bg-red-100 text-red-800 border-red-200', 
         text: 'Payment Failed',
-        icon: '❌',
-        description: 'Payment was unsuccessful'
+        icon: <XCircle className="w-4 h-4" />,
+        description: 'Payment was unsuccessful',
+        bgGradient: 'from-red-500/20 to-rose-500/20',
+        borderColor: 'border-red-400/30'
       },
       'CANCELLED': { 
         color: 'bg-gray-100 text-gray-800 border-gray-200', 
         text: 'Cancelled',
-        icon: '🚫',
-        description: 'Order was cancelled'
+        icon: <Ban className="w-4 h-4" />,
+        description: 'Order was cancelled',
+        bgGradient: 'from-gray-500/20 to-slate-500/20',
+        borderColor: 'border-gray-400/30'
       }
     }
     
@@ -298,296 +382,878 @@ function OrdersPage() {
     }
   }
 
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.8,
+        ease: "easeOut",
+        staggerChildren: 0.1
+      }
+    }
+  }
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.6, ease: "easeOut" }
+    }
+  }
+
+  const cardVariants = {
+    hidden: { opacity: 0, scale: 0.9, y: 20 },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      y: 0,
+      transition: { duration: 0.7, ease: "easeOut" }
+    }
+  }
+
+  const inputVariants = {
+    focused: {
+      scale: 1.02,
+      boxShadow: "0 10px 30px rgba(34, 197, 94, 0.3)",
+      transition: { type: "spring", stiffness: 300, damping: 20 }
+    },
+    unfocused: {
+      scale: 1,
+      boxShadow: "0 4px 20px rgba(0, 0, 0, 0.1)",
+      transition: { type: "spring", stiffness: 300, damping: 20 }
+    }
+  }
+
+  const buttonVariants = {
+    idle: { scale: 1 },
+    hover: { 
+      scale: 1.05,
+      boxShadow: "0 15px 35px rgba(34, 197, 94, 0.4)",
+      transition: { type: "spring", stiffness: 300, damping: 10 }
+    },
+    tap: { scale: 0.95 }
+  }
+
+  // Floating elements for background
+  const floatingElements = Array.from({ length: 12 }, (_, i) => (
+    <motion.div
+      key={i}
+      className="absolute w-2 h-2 bg-gradient-to-r from-green-400 to-emerald-400 rounded-full opacity-20"
+      animate={{
+        x: [0, Math.random() * 200 - 100, 0],
+        y: [0, Math.random() * 200 - 100, 0],
+        scale: [1, 1.5, 1],
+        opacity: [0.2, 0.6, 0.2],
+      }}
+      transition={{
+        duration: Math.random() * 6 + 4,
+        repeat: Infinity,
+        repeatType: "reverse",
+        delay: Math.random() * 3,
+      }}
+      style={{
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+      }}
+    />
+  ))
+
   if (!isAuthenticated) {
     return null
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Orders & Shop</h1>
-              <p className="text-gray-600">Place new orders and track existing ones</p>
-            </div>
-            <button
-              onClick={() => setShowOrderForm(!showOrderForm)}
-              className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-green-900 to-emerald-900 relative overflow-hidden">
+      {/* Enhanced Animated Background */}
+      <div className="absolute inset-0">
+        {/* Interactive gradient following mouse */}
+        <motion.div
+          className="absolute inset-0 opacity-20"
+          animate={{
+            background: `radial-gradient(800px circle at ${mousePosition.x}% ${mousePosition.y}%, rgba(34, 197, 94, 0.4), transparent 70%)`
+          }}
+          transition={{ type: "tween", ease: "linear", duration: 0.2 }}
+        />
+
+        {/* Floating elements */}
+        {floatingElements}
+
+        {/* Large background shapes */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-1000"></div>
+        <div className="absolute top-3/4 left-1/2 w-64 h-64 bg-teal-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse delay-500"></div>
+
+        {/* Grid pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="w-full h-full" style={{
+            backgroundImage: `
+              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+            `,
+            backgroundSize: '50px 50px'
+          }} />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="relative z-10 py-8 px-4 sm:px-6 lg:px-8">
+        <motion.div
+          className="max-w-7xl mx-auto space-y-8"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {/* Enhanced Header */}
+          <motion.div
+            className="text-center mb-12"
+            variants={itemVariants}
+          >
+            <motion.div
+              className="flex justify-center mb-6"
+              animate={{
+                rotate: [0, 10, -10, 0],
+                scale: [1, 1.1, 1],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
             >
-              {showOrderForm ? 'Cancel Order' : 'Place New Order'}
-            </button>
-          </div>
-        </div>
-
-        {/* Product Display & Order Form */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Product Card */}
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="text-center mb-6">
-              <div className="text-6xl mb-4">{product.image}</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{product.name}</h2>
-              <p className="text-gray-600 mb-4">{product.description}</p>
-              <div className="text-3xl font-bold text-green-600">
-                {product.currency} {product.pricePerKg.toFixed(2)} / kg
-              </div>
-              <span className={`inline-flex px-3 py-1 rounded-full text-sm font-medium mt-2 ${
-                product.inStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {product.inStock ? 'In Stock' : 'Out of Stock'}
-              </span>
-            </div>
-          </div>
-
-          {/* Order Form */}
-          {showOrderForm && (
-            <div className="bg-white shadow rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Place Your Order</h3>
-              <form onSubmit={handleCreateOrder} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Quantity (kg)
-                  </label>
-                  <input
-                    type="number"
-                    name="quantity"
-                    min="1"
-                    max="100"
-                    value={orderForm.quantity}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Delivery Address
-                  </label>
-                  <textarea
-                    name="address"
-                    rows={3}
-                    value={orderForm.address}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
-                    placeholder="Enter your complete delivery address"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={orderForm.phone}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
-                    placeholder="07XXXXXXXX"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Special Instructions (Optional)
-                  </label>
-                  <textarea
-                    name="specialInstructions"
-                    rows={2}
-                    value={orderForm.specialInstructions}
-                    onChange={handleFormChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
-                    placeholder="Any special delivery instructions..."
-                  />
-                </div>
-
-                {/* Order Summary */}
-                <div className="border-t pt-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-600">Quantity:</span>
-                    <span className="font-medium">{orderForm.quantity} kg</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-gray-600">Price per kg:</span>
-                    <span className="font-medium">{product.currency} {product.pricePerKg.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
-                    <span>Total:</span>
-                    <span className="text-green-600">{product.currency} {calculateTotal()}</span>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isProcessingPayment || !product.inStock}
-                  className="w-full py-3 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              <div className="relative">
+                <span className="text-8xl filter drop-shadow-2xl">🛒</span>
+                <motion.div
+                  className="absolute -top-2 -right-2"
+                  animate={{
+                    rotate: [0, 360],
+                    scale: [1, 1.2, 1],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                  }}
                 >
-                  {isProcessingPayment ? 'Processing...' : `Pay ${product.currency} ${calculateTotal()} & Place Order`}
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
+                  <Sparkles className="w-6 h-6 text-yellow-400" />
+                </motion.div>
+              </div>
+            </motion.div>
+            
+            <motion.h1
+              className="text-6xl font-black bg-gradient-to-r from-white via-green-200 to-emerald-200 bg-clip-text text-transparent mb-4"
+              animate={{
+                textShadow: [
+                  "0 0 20px rgba(34, 197, 94, 0.5)",
+                  "0 0 30px rgba(16, 185, 129, 0.7)",
+                  "0 0 20px rgba(34, 197, 94, 0.5)",
+                ]
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              Premium Flower Shop
+            </motion.h1>
+            
+            <motion.p
+              className="text-green-200 text-xl max-w-2xl mx-auto"
+              variants={itemVariants}
+            >
+              Experience the finest organic banana flower blossoms 🌺
+            </motion.p>
+          </motion.div>
 
-        {/* Order History with Enhanced Status Integration */}
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Your Order History 
-              <span className="text-sm font-normal text-gray-500 ml-2">
-                ({userOrders.length} {userOrders.length === 1 ? 'order' : 'orders'})
-              </span>
-            </h2>
-            <div className="flex gap-2">
-              <span className="text-sm text-gray-500">
-                User: {user.username} (ID: {user.id})
-              </span>
-              <button
-                onClick={fetchUserOrders}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-              >
-                Refresh Orders
-              </button>
+          {/* Enhanced Welcome Section with Fixed Navigation */}
+          <motion.div
+            className="bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl p-8 relative overflow-hidden"
+            variants={cardVariants}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-emerald-500/5 rounded-3xl"></div>
+            
+            <div className="relative z-10">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <div className="flex items-center space-x-6">
+                  <motion.div
+                    className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-3xl flex items-center justify-center shadow-2xl"
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                  >
+                    <ShoppingCart className="w-10 h-10 text-white" />
+                  </motion.div>
+                  <div>
+                    <h2 className="text-3xl font-bold text-white mb-2">Welcome back, {user.username}!</h2>
+                    <p className="text-green-200 text-lg">Discover our premium organic collection</p>
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                        ))}
+                        <span className="text-green-200 ml-2">4.9/5 Rating</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-green-200">
+                        <Heart className="w-4 h-4 fill-red-400 text-red-400" />
+                        <span>1000+ Happy Customers</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex gap-4">
+                  <motion.button
+                    onClick={scrollToOrderForm}
+                    className="px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-2xl font-bold hover:shadow-2xl transition-all duration-300 flex items-center space-x-3"
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    <Plus className="w-5 h-5" />
+                    <span>Place Order</span>
+                  </motion.button>
+                  
+                  <motion.button
+                    onClick={scrollToOrderHistory}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold hover:shadow-2xl transition-all duration-300 flex items-center space-x-3"
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    <Eye className="w-5 h-5" />
+                    <span>View Orders</span>
+                  </motion.button>
+                </div>
+              </div>
             </div>
+          </motion.div>
+
+          {/* Enhanced Product & Order Section - Always Visible */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8" ref={orderFormRef}>
+            {/* Enhanced Product Card - Updated for USD pricing */}
+            <motion.div
+              className="xl:col-span-1 bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl p-8 relative overflow-hidden"
+              variants={cardVariants}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-3xl"></div>
+              
+              <div className="relative z-10">
+                <div className="text-center mb-6">
+                  <motion.div
+                    className="text-9xl mb-4"
+                    animate={{
+                      rotate: [0, 10, -10, 0],
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    {product.image}
+                  </motion.div>
+                  
+                  <div className="bg-white/10 rounded-2xl p-1 mb-4">
+                    <h3 className="text-2xl font-bold text-white mb-2">{product.name}</h3>
+                    <p className="text-green-200 mb-4 leading-relaxed">{product.description}</p>
+                  </div>
+                </div>
+
+                {/* Product Features */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {product.features.map((feature, index) => (
+                    <motion.div 
+                      key={index}
+                      className="bg-white/10 rounded-xl p-3 text-center border border-white/20"
+                      whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.15)" }}
+                    >
+                      <span className="text-green-300 font-medium text-sm">{feature}</span>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Rating and Reviews */}
+                <div className="bg-white/10 rounded-xl p-4 mb-6 border border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                      ))}
+                      <span className="text-white font-bold">{product.rating}</span>
+                    </div>
+                    <span className="text-green-200 text-sm">({product.reviews} reviews)</span>
+                  </div>
+                </div>
+                
+                {/* Price - Updated for USD */}
+                <div className="text-center mb-6">
+                  <motion.div
+                    className="text-4xl font-black text-green-400 mb-3"
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    ${product.pricePer100g.toFixed(2)} / 100g
+                  </motion.div>
+                  
+                  <motion.span 
+                    className={`inline-flex items-center px-6 py-3 rounded-full text-lg font-bold ${
+                      product.inStock 
+                        ? 'bg-green-500/20 text-green-300 border border-green-400/30' 
+                        : 'bg-red-500/20 text-red-300 border border-red-400/30'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                  >
+                    {product.inStock ? (
+                      <>
+                        <CheckCircle className="w-5 h-5 mr-2" />
+                        In Stock
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="w-5 h-5 mr-2" />
+                        Out of Stock
+                      </>
+                    )}
+                  </motion.span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Enhanced Order Form - Updated for grams and USD */}
+            <motion.div
+              className="xl:col-span-2 bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl p-8 relative overflow-hidden"
+              variants={cardVariants}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-green-500/10 rounded-3xl"></div>
+              
+              <div className="relative z-10">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-3xl font-bold text-white flex items-center">
+                    <Package className="w-8 h-8 mr-3 text-emerald-400" />
+                    Place Your Order
+                  </h3>
+                  <div className="flex items-center gap-2 text-green-200">
+                    <Truck className="w-5 h-5" />
+                    <span className="text-sm">Free delivery on orders over $50</span>
+                  </div>
+                </div>
+                
+                <form onSubmit={handleCreateOrder} className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Quantity Field - Updated for grams */}
+                    <motion.div variants={itemVariants} className="lg:col-span-1">
+                      <label className="block text-lg font-semibold text-white mb-4">
+                        Quantity (grams) - Min: 100g
+                      </label>
+                      <div className="flex items-center space-x-4">
+                        <motion.button
+                          type="button"
+                          onClick={() => setOrderForm({...orderForm, quantity: Math.max(100, orderForm.quantity - 100)})}
+                          className="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Minus className="w-6 h-6" />
+                        </motion.button>
+                        
+                        <motion.div
+                          className="relative flex-1"
+                          variants={inputVariants}
+                          animate={focusedField === 'quantity' ? 'focused' : 'unfocused'}
+                        >
+                          <input
+                            type="number"
+                            name="quantity"
+                            min="100"
+                            max="10000"
+                            step="100"
+                            value={orderForm.quantity}
+                            onChange={handleFormChange}
+                            onFocus={() => setFocusedField('quantity')}
+                            onBlur={() => setFocusedField('')}
+                            className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white text-center text-2xl font-bold placeholder-gray-400 focus:outline-none focus:border-green-400 transition-all duration-300"
+                            required
+                          />
+                        </motion.div>
+                        
+                        <motion.button
+                          type="button"
+                          onClick={() => setOrderForm({...orderForm, quantity: Math.min(10000, orderForm.quantity + 100)})}
+                          className="w-14 h-14 bg-white/10 border border-white/20 rounded-2xl flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Plus className="w-6 h-6" />
+                        </motion.button>
+                      </div>
+                    </motion.div>
+
+                    {/* Phone Field */}
+                    <motion.div variants={itemVariants} className="lg:col-span-1">
+                      <label className="block text-lg font-semibold text-white mb-4">
+                        <Phone className="w-5 h-5 inline mr-2" />
+                        Phone Number
+                      </label>
+                      <motion.div
+                        className="relative"
+                        variants={inputVariants}
+                        animate={focusedField === 'phone' ? 'focused' : 'unfocused'}
+                      >
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={orderForm.phone}
+                          onChange={handleFormChange}
+                          onFocus={() => setFocusedField('phone')}
+                          onBlur={() => setFocusedField('')}
+                          className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-green-400 transition-all duration-300 text-lg"
+                          placeholder="Enter your phone number"
+                          required
+                        />
+                      </motion.div>
+                    </motion.div>
+                  </div>
+
+                  {/* Address Field */}
+                  <motion.div variants={itemVariants}>
+                    <label className="block text-lg font-semibold text-white mb-4">
+                      <MapPin className="w-5 h-5 inline mr-2" />
+                      Delivery Address
+                    </label>
+                    <motion.div
+                      className="relative"
+                      variants={inputVariants}
+                      animate={focusedField === 'address' ? 'focused' : 'unfocused'}
+                    >
+                      <textarea
+                        name="address"
+                        rows={3}
+                        value={orderForm.address}
+                        onChange={handleFormChange}
+                        onFocus={() => setFocusedField('address')}
+                        onBlur={() => setFocusedField('')}
+                        className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-green-400 transition-all duration-300 resize-none text-lg"
+                        placeholder="Enter your complete delivery address"
+                        required
+                      />
+                    </motion.div>
+                  </motion.div>
+
+                  {/* Special Instructions Field */}
+                  <motion.div variants={itemVariants}>
+                    <label className="block text-lg font-semibold text-white mb-4">
+                      <FileText className="w-5 h-5 inline mr-2" />
+                      Special Instructions (Optional)
+                    </label>
+                    <motion.div
+                      className="relative"
+                      variants={inputVariants}
+                      animate={focusedField === 'specialInstructions' ? 'focused' : 'unfocused'}
+                    >
+                      <textarea
+                        name="specialInstructions"
+                        rows={2}
+                        value={orderForm.specialInstructions}
+                        onChange={handleFormChange}
+                        onFocus={() => setFocusedField('specialInstructions')}
+                        onBlur={() => setFocusedField('')}
+                        className="w-full px-6 py-4 bg-white/10 border border-white/20 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:border-green-400 transition-all duration-300 resize-none text-lg"
+                        placeholder="Any special delivery instructions..."
+                      />
+                    </motion.div>
+                  </motion.div>
+
+                  {/* Enhanced Order Summary - Updated for USD */}
+                  <motion.div 
+                    className="border-t border-white/20 pt-8 space-y-6"
+                    variants={itemVariants}
+                  >
+                    <div className="bg-gradient-to-r from-white/10 to-white/5 rounded-3xl p-8 border border-white/20">
+                      <h4 className="text-xl font-bold text-white mb-6 flex items-center">
+                        <CreditCard className="w-6 h-6 mr-3 text-green-400" />
+                        Order Summary
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center text-lg">
+                          <span className="text-green-200">Product:</span>
+                          <span className="font-bold text-white">{product.name}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-lg">
+                          <span className="text-green-200">Quantity:</span>
+                          <span className="font-bold text-white">{orderForm.quantity}g</span>
+                        </div>
+                        <div className="flex justify-between items-center text-lg">
+                          <span className="text-green-200">Price per 100g:</span>
+                          <span className="font-bold text-white">${product.pricePer100g.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-lg border-t border-white/20 pt-4">
+                          <span className="text-green-200">Delivery:</span>
+                          <span className="font-bold text-green-400">
+                            {parseFloat(calculateTotal()) >= 50 ? 'FREE' : '$5.00'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-2xl font-black border-t border-white/20 pt-4">
+                          <span className="text-white">Total:</span>
+                          <motion.span 
+                            className="text-green-400"
+                            animate={{ scale: [1, 1.05, 1] }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          >
+                            ${(parseFloat(calculateTotal()) + (parseFloat(calculateTotal()) >= 50 ? 0 : 5)).toFixed(2)}
+                          </motion.span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <motion.button
+                      type="submit"
+                      disabled={isProcessingPayment || !product.inStock}
+                      className="w-full py-6 px-8 bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 text-white font-bold rounded-2xl text-xl shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+                      variants={buttonVariants}
+                      whileHover={!isProcessingPayment ? "hover" : ""}
+                      whileTap={!isProcessingPayment ? "tap" : ""}
+                    >
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-400"
+                        initial={{ x: '-100%' }}
+                        whileHover={{ x: '100%' }}
+                        transition={{ duration: 0.6 }}
+                      />
+                      <span className="relative z-10 flex items-center justify-center">
+                        {isProcessingPayment ? (
+                          <>
+                            <motion.div
+                              className="w-7 h-7 border-3 border-white/30 border-t-white rounded-full mr-4"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            />
+                            Processing Your Order...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="w-7 h-7 mr-4" />
+                            💳 Pay ${(parseFloat(calculateTotal()) + (parseFloat(calculateTotal()) >= 50 ? 0 : 5)).toFixed(2)} & Place Order 🌺
+                          </>
+                        )}
+                      </span>
+                    </motion.button>
+                  </motion.div>
+                </form>
+              </div>
+            </motion.div>
           </div>
-          
-          {isLoading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-              <p className="text-gray-600 mt-4">Loading your orders...</p>
-            </div>
-          ) : userOrders.length > 0 ? (
-            <div className="space-y-6">
-              {userOrders.map((order) => {
-                const statusDisplay = getStatusDisplay(order.paymentStatus || 'PENDING')
-                const nextSteps = getNextSteps(order.paymentStatus || 'PENDING')
-                return (
-                  <div key={order.id} className={`border rounded-lg p-6 ${statusDisplay.color.includes('border') ? '' : 'border-gray-200'}`}>
-                    {/* Order Header */}
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-bold text-lg text-gray-900">Order #{order.id}</h3>
-                          <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${statusDisplay.color}`}>
-                            <span>{statusDisplay.icon}</span>
-                            <span>{statusDisplay.text}</span>
+
+          {/* Enhanced Order History - Updated ref */}
+          <motion.div
+            ref={orderHistoryRef}
+            className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl p-8 relative overflow-hidden"
+            variants={cardVariants}
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-emerald-500/5 rounded-3xl"></div>
+            
+            <div className="relative z-10">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-6">
+                <div>
+                  <h2 className="text-4xl font-bold text-white flex items-center mb-3">
+                    <Package className="w-8 h-8 mr-4 text-green-400" />
+                    Your Order History
+                    <span className="text-xl font-normal text-green-200 ml-4 bg-white/10 px-4 py-2 rounded-full">
+                      {userOrders.length} {userOrders.length === 1 ? 'order' : 'orders'}
+                    </span>
+                  </h2>
+                  <p className="text-green-200 text-lg">Track all your wellness orders and deliveries</p>
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <div className="text-sm text-green-300 bg-white/10 px-4 py-3 rounded-xl border border-white/20">
+                    <span className="font-semibold">Customer:</span> {user.username}
+                  </div>
+                  <motion.button
+                    onClick={fetchUserOrders}
+                    className="px-6 py-3 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-xl font-medium hover:bg-blue-500/30 transition-all duration-200 flex items-center space-x-3"
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                    <span>Refresh</span>
+                  </motion.button>
+                </div>
+              </div>
+              
+              {isLoading ? (
+                <motion.div 
+                  className="text-center py-16"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <motion.div
+                    className="w-20 h-20 border-4 border-green-400/30 border-t-green-400 rounded-full mx-auto mb-6"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  />
+                  <p className="text-green-200 text-xl">Loading your orders...</p>
+                </motion.div>
+              ) : userOrders.length > 0 ? (
+                <motion.div 
+                  className="space-y-6"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  {userOrders.map((order, index) => {
+                    const statusDisplay = getStatusDisplay(order.paymentStatus || 'PENDING')
+                    const nextSteps = getNextSteps(order.paymentStatus || 'PENDING')
+                    return (
+                      <motion.div 
+                        key={order.id} 
+                        className={`bg-gradient-to-r ${statusDisplay.bgGradient} border ${statusDisplay.borderColor} rounded-3xl p-8 relative overflow-hidden`}
+                        variants={itemVariants}
+                        whileHover={{ scale: 1.02, y: -5 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      >
+                        <div className="absolute inset-0 bg-white/5 rounded-3xl"></div>
+                        
+                        <div className="relative z-10">
+                          {/* Order Header */}
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-6">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-4 mb-4">
+                                <h3 className="font-bold text-3xl text-white">Order #{order.id}</h3>
+                                <motion.div 
+                                  className={`flex items-center gap-3 px-6 py-3 rounded-full text-lg font-bold border ${statusDisplay.color}`}
+                                  whileHover={{ scale: 1.05 }}
+                                >
+                                  {statusDisplay.icon}
+                                  <span>{statusDisplay.text}</span>
+                                </motion.div>
+                              </div>
+                              <p className="text-green-200 mb-3 text-lg">
+                                📅 Ordered on {new Date(order.orderDateTime).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'long',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                              <p className="text-green-300 text-xl">{statusDisplay.description}</p>
+                            </div>
+                            <div className="text-right">
+                              <motion.p 
+                                className="font-black text-4xl text-green-400 mb-2"
+                                animate={{ scale: [1, 1.05, 1] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                              >
+                                ${order.totalAmount?.toFixed(2)}
+                              </motion.p>
+                              <p className="text-green-200">Total Amount</p>
+                            </div>
+                          </div>
+                          
+                          {/* Order Details Grid */}
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                            <motion.div 
+                              className="bg-white/10 rounded-2xl p-6 border border-white/20"
+                              whileHover={{ scale: 1.02 }}
+                            >
+                              <p className="text-lg font-bold text-green-200 mb-3 flex items-center">
+                                <Package className="w-5 h-5 mr-3" />
+                                Items Ordered:
+                              </p>
+                              <p className="text-white font-medium text-lg">{order.items || 'No items specified'}</p>
+                            </motion.div>
+                            
+                            <motion.div 
+                              className="bg-white/10 rounded-2xl p-6 border border-white/20"
+                              whileHover={{ scale: 1.02 }}
+                            >
+                              <p className="text-lg font-bold text-green-200 mb-3 flex items-center">
+                                <MapPin className="w-5 h-5 mr-3" />
+                                Delivery Address:
+                              </p>
+                              <p className="text-white font-medium text-lg">{order.address?.split(' | ')[0] || order.address || 'No address provided'}</p>
+                            </motion.div>
+                            
+                            {order.address?.includes('Phone:') && (
+                              <motion.div 
+                                className="bg-white/10 rounded-2xl p-6 border border-white/20"
+                                whileHover={{ scale: 1.02 }}
+                              >
+                                <p className="text-lg font-bold text-green-200 mb-3 flex items-center">
+                                  <Phone className="w-5 h-5 mr-3" />
+                                  Contact Number:
+                                </p>
+                                <p className="text-white font-medium text-lg">
+                                  {order.address.split('Phone: ')[1]?.split(' | ')[0] || 'Not provided'}
+                                </p>
+                              </motion.div>
+                            )}
+                            
+                            {order.paymentId && (
+                              <motion.div 
+                                className="bg-white/10 rounded-2xl p-6 border border-white/20"
+                                whileHover={{ scale: 1.02 }}
+                              >
+                                <p className="text-lg font-bold text-green-200 mb-3 flex items-center">
+                                  <CreditCard className="w-5 h-5 mr-3" />
+                                  Payment ID:
+                                </p>
+                                <p className="text-white font-medium font-mono text-lg">{order.paymentId}</p>
+                              </motion.div>
+                            )}
+                          </div>
+                          
+                          {/* Next Steps & Actions */}
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pt-6 border-t border-white/20">
+                            <div className="flex-1">
+                              <p className="text-lg font-bold text-green-200 mb-3 flex items-center">
+                                <AlertCircle className="w-5 h-5 mr-3" />
+                                Next Steps:
+                              </p>
+                              <p className="text-green-300 font-medium text-lg">{nextSteps}</p>
+                            </div>
+                            
+                            {/* Action Buttons */}
+                            <div className="flex gap-3">
+                              {order.paymentStatus === 'FAILED' && (
+                                <motion.button 
+                                  onClick={() => {
+                                    toast.info('Retry payment feature coming soon!')
+                                  }}
+                                  className="px-6 py-3 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded-xl font-medium hover:bg-blue-500/30 transition-all duration-200 flex items-center space-x-3"
+                                  variants={buttonVariants}
+                                  whileHover="hover"
+                                  whileTap="tap"
+                                >
+                                  <Repeat className="w-5 h-5" />
+                                  <span>Retry Payment</span>
+                                </motion.button>
+                              )}
+                              
+                              {order.paymentStatus === 'PENDING' && (
+                                <motion.button 
+                                  onClick={() => {
+                                    toast.info('Payment reminder sent!')
+                                  }}
+                                  className="px-6 py-3 bg-yellow-500/20 text-yellow-300 border border-yellow-400/30 rounded-xl font-medium hover:bg-yellow-500/30 transition-all duration-200 flex items-center space-x-3"
+                                  variants={buttonVariants}
+                                  whileHover="hover"
+                                  whileTap="tap"
+                                >
+                                  <Clock className="w-5 h-5" />
+                                  <span>Complete Payment</span>
+                                </motion.button>
+                              )}
+                              
+                              {(order.paymentStatus === 'PAID' || order.paymentStatus === 'PENDING') && (
+                                <motion.button 
+                                  onClick={() => {
+                                    if (window.confirm('Are you sure you want to cancel this order?')) {
+                                      toast.info('Order cancellation feature coming soon!')
+                                    }
+                                  }}
+                                  className="px-6 py-3 bg-gray-500/20 text-gray-300 border border-gray-400/30 rounded-xl font-medium hover:bg-gray-500/30 transition-all duration-200 flex items-center space-x-3"
+                                  variants={buttonVariants}
+                                  whileHover="hover"
+                                  whileTap="tap"
+                                >
+                                  <Ban className="w-5 h-5" />
+                                  <span>Cancel Order</span>
+                                </motion.button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-600 mb-1">
-                          Ordered on {new Date(order.orderDateTime).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                        <p className="text-sm text-gray-500">{statusDisplay.description}</p>
-                        {/* Debug info - remove in production */}
-                        <p className="text-xs text-gray-400 mt-1">
-                          Order User: {order.user?.username} (ID: {order.user?.id})
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-xl text-green-600">
-                          {product.currency} {order.totalAmount?.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Order Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Items Ordered:</p>
-                        <p className="text-sm text-gray-900">{order.items || 'No items specified'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">Delivery Address:</p>
-                        <p className="text-sm text-gray-900">{order.address?.split(' | ')[0] || order.address || 'No address provided'}</p>
-                      </div>
-                      {order.address?.includes('Phone:') && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-1">Contact Number:</p>
-                          <p className="text-sm text-gray-900">
-                            {order.address.split('Phone: ')[1]?.split(' | ')[0] || 'Not provided'}
-                          </p>
-                        </div>
-                      )}
-                      {order.paymentId && (
-                        <div>
-                          <p className="text-sm font-medium text-gray-700 mb-1">Payment ID:</p>
-                          <p className="text-sm text-gray-900 font-mono">{order.paymentId}</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Next Steps & Actions */}
-                    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-700 mb-1">Next Steps:</p>
-                        <p className="text-sm text-gray-600">{nextSteps}</p>
-                      </div>
-                      
-                      {/* Action Buttons */}
-                      <div className="flex gap-2">
-                        {order.paymentStatus === 'FAILED' && (
-                          <button 
-                            onClick={() => {
-                              toast.info('Retry payment feature coming soon!')
-                            }}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
-                          >
-                            Retry Payment
-                          </button>
-                        )}
-                        
-                        {order.paymentStatus === 'PENDING' && (
-                          <button 
-                            onClick={() => {
-                              toast.info('Payment reminder sent!')
-                            }}
-                            className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 text-sm font-medium"
-                          >
-                            Complete Payment
-                          </button>
-                        )}
-                        
-                        {(order.paymentStatus === 'PAID' || order.paymentStatus === 'PENDING') && (
-                          <button 
-                            onClick={() => {
-                              if (window.confirm('Are you sure you want to cancel this order?')) {
-                                toast.info('Order cancellation feature coming soon!')
-                              }
-                            }}
-                            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 text-sm font-medium"
-                          >
-                            Cancel Order
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+                      </motion.div>
+                    )
+                  })}
+                </motion.div>
+              ) : (
+                <motion.div 
+                  className="text-center py-20"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <motion.div
+                    className="text-9xl mb-8"
+                    animate={{
+                      rotate: [0, 10, -10, 0],
+                      scale: [1, 1.1, 1],
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    📦
+                  </motion.div>
+                  <h3 className="text-4xl font-bold text-white mb-6">No orders yet</h3>
+                  <p className="text-green-200 mb-10 text-xl max-w-2xl mx-auto">
+                    Start your wellness journey with our premium organic banana flower blossoms!
+                  </p>
+                  <motion.button
+                    onClick={scrollToOrderForm}
+                    className="px-10 py-5 bg-gradient-to-r from-emerald-600 to-green-600 text-white rounded-2xl font-bold hover:shadow-2xl transition-all duration-200 flex items-center space-x-4 mx-auto text-xl"
+                    variants={buttonVariants}
+                    whileHover="hover"
+                    whileTap="tap"
+                  >
+                    <Plus className="w-7 h-7" />
+                    <span>Place Your First Order</span>
+                    <span>🌺</span>
+                  </motion.button>
+                </motion.div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📦</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No orders yet</h3>
-              <p className="text-gray-600 mb-4">Place your first order to see it here!</p>
-              <button
-                onClick={() => setShowOrderForm(true)}
-                className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+          </motion.div>
+
+          {/* Enhanced Decorative Elements */}
+          <motion.div
+            className="flex justify-center space-x-8 mt-12"
+            variants={itemVariants}
+          >
+            {['🌺', '🛒', '📦', '💳', '🚚'].map((emoji, index) => (
+              <motion.div
+                key={index}
+                className="text-5xl cursor-pointer filter drop-shadow-2xl"
+                whileHover={{ 
+                  scale: 1.8, 
+                  rotate: 360,
+                  filter: "drop-shadow(0 0 30px rgba(34, 197, 94, 0.8))"
+                }}
+                animate={{
+                  y: [0, -20, 0],
+                  rotate: [0, 15, -15, 0],
+                }}
+                transition={{
+                  duration: 3 + index * 0.3,
+                  repeat: Infinity,
+                  delay: index * 0.2,
+                  ease: "easeInOut",
+                }}
               >
-                Place Your First Order
-              </button>
+                {emoji}
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Enhanced Footer Message */}
+          <motion.div
+            className="text-center mt-12"
+            variants={itemVariants}
+          >
+            <div className="bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/20">
+              <p className="text-green-300 text-xl mb-4">
+                🌟 Your wellness journey starts with every order - fresh, natural, premium quality! 🌟
+              </p>
+              <p className="text-green-200 text-lg">
+                Free delivery on orders over $50 • Organic certified • 100% satisfaction guarantee
+              </p>
             </div>
-          )}
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   )
