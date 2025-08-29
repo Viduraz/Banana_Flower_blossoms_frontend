@@ -13,12 +13,18 @@ import {
   Quote,
   Shield,
   Truck,
-  Recycle
+  Recycle,
+  Volume2,
+  VolumeX
 } from 'lucide-react'
+import aboutVideo from '../assets/ABOUTVIDEO.mp4'
 
 function Aboutus() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [visibleSection, setVisibleSection] = useState('')
+  const [isMuted, setIsMuted] = useState(true)
+  const [videoRef, setVideoRef] = useState(null)
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false)
 
   useEffect(() => {
     const updateMousePosition = (e) => {
@@ -31,6 +37,18 @@ function Aboutus() {
     window.addEventListener('mousemove', updateMousePosition)
     return () => window.removeEventListener('mousemove', updateMousePosition)
   }, [])
+
+  // Video control functions
+  const toggleMute = () => {
+    if (videoRef) {
+      videoRef.muted = !isMuted
+      setIsMuted(!isMuted)
+    }
+  }
+
+  const handleVideoLoad = () => {
+    setIsVideoLoaded(true)
+  }
 
   // Animation variants
   const containerVariants = {
@@ -283,6 +301,238 @@ function Aboutus() {
             >
               Transforming Sri Lanka's ancient wisdom into modern wellness, one blossom at a time 🌸
             </motion.p>
+          </motion.div>
+
+          {/* Video Showcase Section */}
+          <motion.div
+            className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-2xl rounded-3xl border border-white/20 shadow-2xl p-8 relative overflow-hidden"
+            variants={cardVariants}
+            whileHover="hover"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-3xl"></div>
+            
+            <div className="relative z-10">
+              <motion.div
+                className="text-center mb-8"
+                variants={itemVariants}
+              >
+                <motion.div
+                  className="text-6xl mb-4"
+                  animate={{
+                    rotate: [0, 15, -15, 0],
+                    scale: [1, 1.2, 1],
+                  }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  🎬
+                </motion.div>
+                <h2 className="text-4xl font-bold text-white mb-4">Experience Our Journey</h2>
+                <p className="text-green-200 text-xl max-w-3xl mx-auto">
+                  Watch how we transform nature's gifts into superfood excellence
+                </p>
+              </motion.div>
+
+              {/* Video Container */}
+              <motion.div
+                className="relative rounded-2xl overflow-hidden bg-black/20 backdrop-blur-sm border border-white/30 shadow-2xl group"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                {/* Auto-playing Video Element */}
+                <video
+                  ref={setVideoRef}
+                  className="w-full h-auto max-h-[600px] object-cover"
+                  autoPlay
+                  loop
+                  muted={isMuted}
+                  onLoadedData={handleVideoLoad}
+                  preload="auto"
+                  playsInline
+                  poster="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiB2aWV3Qm94PSIwIDAgMTkyMCAxMDgwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcz4KPGxpbmVhckdyYWRpZW50IGlkPSJncmFkaWVudCIgeDE9IjAlIiB5MT0iMCUiIHgyPSIxMDAlIiB5Mj0iMTAwJSI+CjxzdG9wIG9mZnNldD0iMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMxMGI5ODEiLz4KPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdHlsZT0ic3RvcC1jb2xvcjojMDZiNmQ0Ii8+CjwvbGluZWFyR3JhZGllbnQ+CjwvZGVmcz4KPHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCNncmFkaWVudCkiLz4KPHN0eWxlPgoucGV0YWwgewogIGZpbGw6ICNmZjk0YTk7CiAgYW5pbWF0aW9uOiBmbG9hdCA0cyBlYXNlLWluLW91dCBpbmZpbml0ZSBhbHRlcm5hdGU7Cn0KQGtleWZyYW1lcyBmbG9hdCB7CiAgZnJvbSB7IHRyYW5zZm9ybTogdHJhbnNsYXRlWSgwcHgpOyB9CiAgdG8geyB0cmFuc2Zvcm06IHRyYW5zbGF0ZVkoLTIwcHgpOyB9Cn0KPC9zdHlsZT4KPGNpcmNsZSBjeD0iOTYwIiBjeT0iNDQwIiByPSI4MCIgZmlsbD0iIzEwYjk4MSIgb3BhY2l0eT0iMC4yIi8+CjxjaXJjbGUgY3g9Ijc2MCIgY3k9IjY0MCIgcj0iNjAiIGZpbGw9IiMwNmI2ZDQiIG9wYWNpdHk9IjAuMiIvPgo8Y2lyY2xlIGN4PSIxMTYwIiBjeT0iNjQwIiByPSI2MCIgZmlsbD0iIzEwYjk4MSIgb3BhY2l0eT0iMC4yIi8+Cjx0ZXh0IHg9Ijk2MCIgeT0iNTIwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNDgiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXdlaWdodD0iYm9sZCI+QmFuYW5hIEJsb3Nzb20gSm91cm5leSA8L3RleHQ+Cjx0ZXh0IHg9Ijk2MCIgeT0iNTgwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC44KSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+RnJvbSBGYXJtIHRvIFlvdXIgVGFibGU8L3RleHQ+Cjx0ZXh0IHg9Ijk2MCIgeT0iNjMwIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC42KSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+RnJvbSBGYXJtIHRvIFlvdXIgVGFibGU8L3RleHQ+Cgo8L3N2Zz4K"
+                >
+                  <source src={aboutVideo} type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+
+                {/* Video Loading State */}
+                <AnimatePresence>
+                  {!isVideoLoaded && (
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-br from-green-900/80 to-emerald-900/80 flex items-center justify-center"
+                      initial={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <motion.div
+                        className="text-white text-center"
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                      >
+                        <div className="text-4xl mb-4">🌸</div>
+                        <p className="text-lg">Loading our beautiful story...</p>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Subtle Video Overlay - Only on Hover */}
+                <motion.div 
+                  className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  initial={{ opacity: 0 }}
+                  whileHover={{ opacity: 1 }}
+                >
+                  {/* Only Volume Control - No Play/Pause */}
+                  <div className="absolute bottom-6 right-6">
+                    <motion.button
+                      onClick={toggleMute}
+                      className="w-14 h-14 bg-white/20 backdrop-blur-xl border border-white/30 rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      {isMuted ? (
+                        <VolumeX className="w-6 h-6" />
+                      ) : (
+                        <Volume2 className="w-6 h-6" />
+                      )}
+                    </motion.button>
+                  </div>
+
+                  {/* Enhanced Video Title Overlay */}
+                  <motion.div 
+                    className="absolute bottom-6 left-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <div className="bg-white/20 backdrop-blur-xl border border-white/30 rounded-2xl px-6 py-4">
+                      <h3 className="text-white font-bold text-xl mb-1">From Farm to Table</h3>
+                      <p className="text-green-200 text-sm mb-2">Our Sustainable Journey</p>
+                      <div className="flex items-center space-x-2 text-green-300">
+                        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        <span className="text-xs font-medium">Continuous Experience</span>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* Video Status Indicator */}
+                  <div className="absolute top-6 left-6 right-6">
+                    <motion.div
+                      className="bg-white/20 backdrop-blur-xl border border-white/30 rounded-xl px-4 py-2 text-center"
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      <p className="text-white text-sm">
+                        🎬 Now Playing
+                        <span className="ml-2 text-green-300">• HD Quality • Auto Loop</span>
+                      </p>
+                    </motion.div>
+                  </div>
+                </motion.div>
+
+                {/* Animated Corner Decorations */}
+                <div className="absolute top-4 left-4">
+                  <motion.div
+                    className="w-12 h-12 border-2 border-white/30 rounded-tl-2xl"
+                    animate={{ rotate: [0, 90, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                </div>
+                <div className="absolute top-4 right-4">
+                  <motion.div
+                    className="w-12 h-12 border-2 border-white/30 rounded-tr-2xl"
+                    animate={{ rotate: [0, -90, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  />
+                </div>
+                <div className="absolute bottom-4 left-4">
+                  <motion.div
+                    className="w-12 h-12 border-2 border-white/30 rounded-bl-2xl"
+                    animate={{ rotate: [0, -90, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                  />
+                </div>
+                <div className="absolute bottom-4 right-4">
+                  <motion.div
+                    className="w-12 h-12 border-2 border-white/30 rounded-br-2xl"
+                    animate={{ rotate: [0, 90, 0] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+                  />
+                </div>
+              </motion.div>
+
+              {/* Enhanced Video Description */}
+              <motion.div
+                className="mt-8 text-center"
+                variants={itemVariants}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { icon: "🌱", title: "Sustainable Farming", desc: "Organic cultivation methods from Sri Lankan farms" },
+                    { icon: "🏭", title: "Clean Processing", desc: "Modern hygienic facilities with traditional care" },
+                    { icon: "📦", title: "Global Delivery", desc: "Fresh banana blossom powder worldwide" }
+                  ].map((item, index) => (
+                    <motion.div
+                      key={index}
+                      className="bg-white/10 rounded-xl p-6 backdrop-blur-sm border border-white/20 group"
+                      whileHover={{ y: -5, scale: 1.05 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      delay={index * 0.1}
+                    >
+                      <motion.div 
+                        className="text-4xl mb-3"
+                        whileHover={{ rotate: 10, scale: 1.2 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                      >
+                        {item.icon}
+                      </motion.div>
+                      <h4 className="text-white font-bold text-lg mb-2 group-hover:text-green-300 transition-colors">
+                        {item.title}
+                      </h4>
+                      <p className="text-green-200 text-sm leading-relaxed">{item.desc}</p>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Continuous Experience Message */}
+                <motion.div
+                  className="mt-8"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 backdrop-blur-xl border border-green-400/30 rounded-2xl p-6">
+                    <div className="flex items-center justify-center space-x-3 text-green-300">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                      >
+                        🎬
+                      </motion.div>
+                      <span className="text-lg font-semibold">Continuous Journey Experience</span>
+                      <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        ✨
+                      </motion.div>
+                    </div>
+                    <p className="text-green-200 text-sm mt-2">
+                      Our story plays continuously to immerse you in our sustainable farming journey
+                    </p>
+                  </div>
+                </motion.div>
+              </motion.div>
+            </div>
           </motion.div>
 
           {/* Mission Statement */}
